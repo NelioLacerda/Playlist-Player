@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "playlist-viewr",
+  "productName": "Playlist Player",
   "version": "0.1.0",
-  "identifier": "com.nelio.playlist-viewr",
+  "identifier": "com.nelio.playlist-player",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,13 +12,18 @@
   "app": {
     "windows": [
       {
-        "title": "playlist-viewr",
+        "title": "Playlist Player",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "dragDropEnabled": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost data:; media-src 'self' asset: https://asset.localhost",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
     }
   },
   "bundle": {
