@@ -5,8 +5,8 @@ import "./App.css";
 import { exists, readDir, readTextFile, rename, writeTextFile } from "@tauri-apps/plugin-fs";
 import EditingPanel from "./components/EditingPanel";
 import Sidebar from "./components/Sidebar";
-import VideoRow from "./components/VideoRow";
 import VideoPlayer from "./components/VideoPlayer";
+import VideoList from "./components/VideoList";
 
 interface VideoFile {
   name: string;
@@ -26,7 +26,8 @@ interface PlaylistData {
 interface Archive {
   videos: Record<string, VideoMeta>;
   playlists: Record<string, PlaylistData>;
-  playlistOrder: string[]; 
+  playlistOrder: string[];
+  videoOrder: string[];
 }
 
 const DEFAULT_ICON = "🎬";
@@ -52,7 +53,7 @@ function migratePlaylists(raw: any): { playlists: Record<string, PlaylistData>; 
 function App() {
   const [folder, setFolder] = useState<string | null>(null);
   const [videos, setVideos] = useState<VideoFile[]>([]);
-  const [archive, setArchive] = useState<Archive>({ videos: {}, playlists: {}, playlistOrder: [] });
+  const [archive, setArchive] = useState<Archive>({ videos: {}, videoOrder: [], playlists: {}, playlistOrder: [] });
   const [editingFile, setEditingFile] = useState<VideoFile | null>(null);
   const [playingVideo, setPlayingVideo] = useState<VideoFile | null>(null);
   const [selectedView, setSelectedView] = useState<string>("All");
@@ -61,9 +62,14 @@ function App() {
   const playlistNames = archive.playlistOrder;
 
   const filteredVideos = useMemo(() => {
-    if (selectedView === "All") return videos;
+    const videoByName = new Map(videos.map(v => [v.name, v]));
+
+    if (selectedView === "All") {
+      return archive.videoOrder.map(name => videoByName.get(name)).filter((v): v is VideoFile => !!v);
+    }
+
     const namesInPlaylist = archive.playlists[selectedView]?.videos ?? [];
-    return videos.filter(v => namesInPlaylist.includes(v.name));
+    return namesInPlaylist.map(name => videoByName.get(name)).filter((v): v is VideoFile => !!v);
   }, [selectedView, videos, archive]);
 
   async function loadFolder(directory: string) {
@@ -81,11 +87,27 @@ function App() {
       const content = await readTextFile(jsonPath);
       const parsed = JSON.parse(content);
       const { playlists, order } = migratePlaylists(parsed.playlists);
-      const savedOrder: string[] = parsed.playlistOrder ?? order;
-      const finalOrder = [...savedOrder.filter(n => playlists[n]), ...Object.keys(playlists).filter(n => !savedOrder.includes(n))];
-      setArchive({ videos: parsed.videos ?? {}, playlists, playlistOrder: finalOrder });
+      const savedPlaylistOrder: string[] = parsed.playlistOrder ?? order;
+      const finalPlaylistOrder = [
+        ...savedPlaylistOrder.filter(n => playlists[n]),
+        ...Object.keys(playlists).filter(n => !savedPlaylistOrder.includes(n)),
+      ];
+
+      const allNames = videoFiles.map(v => v.name);
+      const savedVideoOrder: string[] = parsed.videoOrder ?? allNames;
+      const finalVideoOrder = [
+        ...savedVideoOrder.filter(n => allNames.includes(n)),
+        ...allNames.filter(n => !savedVideoOrder.includes(n)),
+      ];
+
+      setArchive({
+        videos: parsed.videos ?? {},
+        playlists,
+        playlistOrder: finalPlaylistOrder,
+        videoOrder: finalVideoOrder,
+      });
     } else {
-      setArchive({ videos: {}, playlists: {}, playlistOrder: [] });
+      setArchive({ videos: {}, playlists: {}, playlistOrder: [], videoOrder: videoFiles.map(v => v.name) });
     }
 
     const store = await load("app-settings.json");
@@ -141,14 +163,43 @@ function App() {
     const newPlaylists: Record<string, PlaylistData> = {};
     for (const [playlistName, data] of Object.entries(archive.playlists)) {
       const withoutThisVideo = data.videos.filter(n => n !== currentName);
-      newPlaylists[playlistName] = {
-        ...data,
-        videos: selectedPlaylists.includes(playlistName) ? [...withoutThisVideo, finalName] : withoutThisVideo,
-      };
+      const newPlaylistVideos = selectedPlaylists.includes(playlistName)
+        ? [...withoutThisVideo, finalName]
+        : withoutThisVideo;
+      newPlaylists[playlistName] = { ...data, videos: newPlaylistVideos };
     }
 
-    await persist({ videos: newVideos, playlists: newPlaylists, playlistOrder: archive.playlistOrder });
+    const newVideoOrder = archive.videoOrder.map(n => (n === currentName ? finalName : n));
+
+    await persist({
+      videos: newVideos,
+      playlists: newPlaylists,
+      playlistOrder: archive.playlistOrder,
+      videoOrder: newVideoOrder,
+    });
     setEditingFile(null);
+  }
+
+  function reorderVideos(newOrder: string[]) {
+    if (selectedView === "All") {
+      persist({ ...archive, videoOrder: newOrder });
+    } else {
+      const current = archive.playlists[selectedView];
+      if (!current) return;
+      persist({
+        ...archive,
+        playlists: { ...archive.playlists, [selectedView]: { ...current, videos: newOrder } },
+      });
+    }
+  }
+
+  function playNext() {
+    setPlayingVideo(current => {
+      if (!current) return null;
+      const currentIndex = filteredVideos.findIndex(v => v.name === current.name);
+      if (currentIndex === -1) return null;
+      return filteredVideos[currentIndex + 1] ?? null;
+    });
   }
 
   function createPlaylist(name: string, icon: string, color: string) {
@@ -189,6 +240,10 @@ function App() {
     persist({ ...archive, playlistOrder: newOrder });
   }
 
+  if (loading) {
+    return <div className="app-shell" />;
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -219,25 +274,13 @@ function App() {
         {filteredVideos.length === 0 ? (
           <p className="empty-state">No videos here yet.</p>
         ) : (
-          <ul className="video-list">
-            {filteredVideos.map(v => {
-              const meta = archive.videos[v.name];
-              const videoPlaylists = Object.entries(archive.playlists)
-                .filter(([, data]) => data.videos.includes(v.name))
-                .map(([name, data]) => ({ name, icon: data.icon, color: data.color }));
-
-              return (
-                <VideoRow
-                  key={v.path}
-                  video={v}
-                  description={meta?.description}
-                  playlists={videoPlaylists}
-                  onPlay={() => setPlayingVideo(v)}
-                  onEdit={() => setEditingFile(v)}
-                />
-              );
-            })}
-          </ul>
+          <VideoList
+            videos={filteredVideos}
+            archive={archive}
+            onPlay={setPlayingVideo}
+            onEdit={setEditingFile}
+            onReorder={reorderVideos}
+          />
         )}
 
         {editingFile && (
@@ -256,7 +299,12 @@ function App() {
         )}
 
         {playingVideo && (
-          <VideoPlayer path={playingVideo.path} name={playingVideo.name} onClose={() => setPlayingVideo(null)} />
+          <VideoPlayer
+            path={playingVideo.path}
+            name={playingVideo.name}
+            onClose={() => setPlayingVideo(null)}
+            onEnded={playNext}
+          />
         )}
       </div>
     </div>

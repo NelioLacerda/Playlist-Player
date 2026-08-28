@@ -650,3 +650,7 @@ body {
   color: var(--accent-2);
   font-weight: 600;
 }
+
+.video-row.dragging {
+  opacity: 0.4;
+}

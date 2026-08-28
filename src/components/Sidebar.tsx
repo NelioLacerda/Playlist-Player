@@ -20,7 +20,7 @@ interface SidebarProps {
 }
 
 const DEFAULT_ICON = "🎬";
-const DEFAULT_COLOR = "#e0a458";
+const DEFAULT_COLOR = "#7744e4";
 
 export default function Sidebar({
   playlists,

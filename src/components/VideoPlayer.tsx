@@ -5,6 +5,7 @@ interface VideoPlayerProps {
   path: string;
   name: string;
   onClose: () => void;
+  onEnded: () => void;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -19,7 +20,7 @@ function formatTime(seconds: number) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-export default function VideoPlayer({ path, name, onClose }: VideoPlayerProps) {
+export default function VideoPlayer({ path, name, onClose, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,19 +122,25 @@ export default function VideoPlayer({ path, name, onClose }: VideoPlayerProps) {
       setIsPlaying(false);
       setControlsVisible(true);
     }
+    function onVideoEnded() {
+      onEnded(); 
+    }
+
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
+    video.addEventListener("ended", onVideoEnded);
 
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
+      video.removeEventListener("ended", onVideoEnded);
     };
-  }, []);
+  }, [onEnded]);
 
   useEffect(() => {
     function onFullscreenChange() {

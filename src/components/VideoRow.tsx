@@ -11,11 +11,12 @@ interface VideoRowProps {
   playlists: { name: string; icon: string; color: string }[];
   onPlay: () => void;
   onEdit: () => void;
+  dragging?: boolean;
 }
 
-export default function VideoRow({ video, description, playlists, onPlay, onEdit }: VideoRowProps) {
+export default function VideoRow({ video, description, playlists, onPlay, onEdit, dragging }: VideoRowProps) {
   return (
-    <li className="video-row">
+    <li className={`video-row ${dragging ? "dragging" : ""}`}>
       <div className="thumb-click" onClick={onPlay}>
         <Thumbnail path={video.path} />
       </div>
