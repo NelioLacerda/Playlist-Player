@@ -40,18 +40,6 @@ All metadata (playlists, descriptions, ordering) is saved in an `archive.json` f
 - Local filesystem access via `@tauri-apps/plugin-fs`
 - Auto-updates via `@tauri-apps/plugin-updater`
 
-## Building from source
-
-```bash
-git clone https://github.com/TEU_USER/playlist-player.git
-cd playlist-player
-pnpm install
-pnpm tauri dev      # development
-pnpm tauri build    # production build
-```
-
-Requires [Rust](https://www.rust-lang.org/tools/install) and [pnpm](https://pnpm.io/installation) installed. See [Tauri's prerequisites](https://tauri.app/start/prerequisites/) for platform-specific setup.
-
 ## License
 
 [MIT](LICENSE)
