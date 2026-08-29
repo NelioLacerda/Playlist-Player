@@ -7,6 +7,7 @@ import EditingPanel from "./components/EditingPanel";
 import Sidebar from "./components/Sidebar";
 import VideoPlayer from "./components/VideoPlayer";
 import VideoList from "./components/VideoList";
+import UpdateChecker from "./components/UpdateChecker";
 
 interface VideoFile {
   name: string;
@@ -264,6 +265,7 @@ function App() {
             <button className="btn" onClick={chooseFolder}>Select folder</button>
             {folder && <p className="folder-path">{folder}</p>}
           </div>
+          <UpdateChecker />
         </div>
 
         <h2 className="view-title">
