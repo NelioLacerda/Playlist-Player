@@ -42,7 +42,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3MEM4OUIyRjFFOUM2MzQKUldRMHh1bnhzb2tNRjV1YWdFWllWVjB6SytqblM2dTYrclloVHl4Q2o0VjJIcTFiVGI1YzVzNFoK",
       "endpoints": [
-        "https://github.com/TEU_USER/playlist-player/releases/latest/download/latest.json"
+        "https://github.com/NelioLacerda/Playlist-Player/releases/latest/download/latest.json"
       ]
     }
   }
